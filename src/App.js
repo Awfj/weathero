@@ -1,7 +1,7 @@
 import React, { Component } from "react";
-import "./App.css";
-
 import axios from "axios";
+
+import "./App.css";
 
 const OPENWEATHERMAP_KEY = process.env.REACT_APP_OPENWEATHERMAP_KEY;
 
@@ -22,41 +22,8 @@ class App extends Component {
   };
   componentDidMount() {
     this.findLocation();
-
-    if (localStorage.getItem("weather")) this.getStoredData();
   }
 
-  // fixes the state after reload, if weather data exists in the local storage
-  getStoredData() {
-    const storedWeatherData = localStorage.getItem("weather").split(",");
-    const search = { ...this.state.search };
-
-    search.city = storedWeatherData[1];
-    search.country = storedWeatherData[2];
-
-    const [
-      serviceName,
-      city,
-      country,
-      temperature,
-      humidity,
-      description,
-      requestDate
-    ] = storedWeatherData;
-
-    this.setState({
-      serviceName,
-      city,
-      country,
-      temperature,
-      humidity,
-      description,
-      requestDate,
-      search
-    });
-  }
-
-  // finds current location
   findLocation = () => {
     axios
       .get(`https://get.geojs.io/v1/ip/geo.json`)
@@ -72,7 +39,7 @@ class App extends Component {
     const search = { ...this.state.search };
     const searchedCity = this.state.search.city;
     const searchedCountry = this.state.search.country;
-    console.log(new Date().getTime())
+    // console.log(new Date().getTime());
 
     let url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
     if (Boolean(this.state.search.city)) {
@@ -80,11 +47,9 @@ class App extends Component {
     }
 
     if (
-      !localStorage.getItem("weather") ||
-      localStorage.getItem("weather").split(",")[1] !==
-        this.state.search.city ||
-      localStorage.getItem("weather").split(",")[2] !==
-        this.state.search.country
+      !localStorage.getItem(
+        `${this.state.search.city}, ${this.state.search.country}`
+      )
     ) {
       axios
         .get(url)
@@ -103,7 +68,7 @@ class App extends Component {
             search
           });
 
-          localStorage.setItem("weather", [
+          localStorage.setItem(`${this.state.city}, ${this.state.country}`, [
             this.state.serviceName,
             this.state.city,
             this.state.country,
@@ -114,8 +79,63 @@ class App extends Component {
           ]);
         })
         .catch(error => console.log(error));
+    } else {
+      this.getStoredData();
     }
   };
+
+  getStoredData() {
+    const search = { ...this.state.search };
+
+    if (
+      Boolean(
+        localStorage.getItem(
+          `${this.state.search.city}, ${this.state.search.country}`
+        )
+      )
+    ) {
+      const storedSearchedData = localStorage
+        .getItem(`${this.state.search.city}, ${this.state.search.country}`)
+        .split(",");
+
+      search.city = storedSearchedData[1];
+      search.country = storedSearchedData[2];
+
+      this.updateState(storedSearchedData, search);
+    } else {
+      const storedStateData = localStorage
+        .getItem(`${this.state.city}, ${this.state.country}`)
+        .split(",");
+
+      search.city = storedStateData[1];
+      search.country = storedStateData[2];
+
+      this.updateState(storedStateData, search);
+    }
+  }
+
+  updateState(storedData, search) {
+    const [
+      serviceName,
+      city,
+      country,
+      temperature,
+      humidity,
+      description,
+      requestDate
+    ] = storedData;
+
+    this.setState({
+      serviceName,
+      city,
+      country,
+      temperature,
+      humidity,
+      description,
+      requestDate,
+      search
+    });
+  }
 
   changeInputValue = event => {
     const search = { ...this.state.search };
@@ -129,7 +149,7 @@ class App extends Component {
   };
 
   render() {
-    // console.log("!!!", this.state);
+    // console.log(this.state);
     return (
       <div className="App">
         <header className="App-header">
