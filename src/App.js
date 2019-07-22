@@ -15,6 +15,7 @@ class App extends Component {
     description: undefined,
     error: undefined,
     requestDate: undefined,
+    requestDateInMs: undefined,
     location: undefined,
     search: {
       city: "",
@@ -24,8 +25,36 @@ class App extends Component {
   componentDidMount() {
     if (localStorage.getItem("location")) {
       this.getStoredLocation();
+      this.updateLocalStorage();
     } else {
       this.findLocation();
+    }
+  }
+
+  updateLocalStorage() {
+    const [city, country] = localStorage.getItem("location").split(",");
+
+    for (let key in localStorage) {
+      if (typeof localStorage[key] === "string") {
+        const storedData = localStorage[key].split(",");
+        const currentDateInMs = new Date().getTime();
+        const expirationDateInMs = 7.2e6;
+
+        if (
+          storedData[7] &&
+          currentDateInMs - storedData[7] > expirationDateInMs
+        ) {
+          if (`${city}, ${country}` !== key) {
+            localStorage.removeItem(key);
+          } else {
+            this.getWeather("", city, country);
+          }
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
     }
   }
 
@@ -57,19 +86,24 @@ class App extends Component {
       .catch(error => console.log(error));
   }
 
-  getWeather = (event, latitude, longitude) => {
+  getWeather = (event, arg1, arg2) => {
     if (event) event.preventDefault();
 
-    const search = { ...this.state.search };
+    let searchedCity = this.state.search.city;
+    let searchedCountry = this.state.search.country;
 
-    // console.log(new Date().getTime());
+    if (localStorage.getItem("location") && arg1 && arg2) {
+      searchedCity = arg1;
+      searchedCountry = arg2;
+    }
 
-    let url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-    if (localStorage.getItem("location")) {
-      const searchedCity = this.state.search.city;
-      const searchedCountry = this.state.search.country;
+    let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
 
-      url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+    if (!localStorage.getItem("location")) {
+      const latitude = arg1;
+      const longitude = arg2;
+
+      url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
     }
 
     if (
@@ -86,7 +120,10 @@ class App extends Component {
             ]);
           }
 
+          const search = { ...this.state.search };
           const requestDate = String(new Date());
+          const requestDateInMs = new Date().getTime();
+
           search.city = response.data.name;
           search.country = response.data.sys.country;
 
@@ -97,6 +134,7 @@ class App extends Component {
             humidity: response.data.main.humidity,
             description: response.data.weather[0].description,
             requestDate,
+            requestDateInMs,
             search
           });
 
@@ -107,7 +145,8 @@ class App extends Component {
             this.state.temperature,
             this.state.humidity,
             this.state.description,
-            this.state.requestDate
+            this.state.requestDate,
+            this.state.requestDateInMs
           ]);
         })
         .catch(error => console.log(error));
@@ -137,7 +176,8 @@ class App extends Component {
       temperature,
       humidity,
       description,
-      requestDate
+      requestDate,
+      requestDateInMs
     ] = storedData;
 
     this.setState({
@@ -148,6 +188,7 @@ class App extends Component {
       humidity,
       description,
       requestDate,
+      requestDateInMs,
       search
     });
   }
@@ -204,7 +245,10 @@ class App extends Component {
             {this.state.error && <p>{this.state.error}</p>}
 
             {this.state.requestDate && (
-              <p>The data was requested on {this.state.requestDate}</p>
+              <p>
+                The data was requested on {this.state.requestDate}. It could be
+                updated after 2 hours since the request was made.
+              </p>
             )}
           </div>
         </header>
