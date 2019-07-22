@@ -15,6 +15,7 @@ class App extends Component {
     description: undefined,
     error: undefined,
     requestDate: undefined,
+    location: undefined,
     search: {
       city: "",
       country: ""
@@ -22,27 +23,46 @@ class App extends Component {
   };
   componentDidMount() {
     this.findLocation();
+
+    if (Boolean(localStorage.getItem("location"))) {
+      this.getStoredLocation();
+    }
   }
 
-  findLocation = () => {
+  getStoredLocation() {
+    const search = { ...this.state.search };
+
+    const [city, country] = localStorage.getItem("location").split(",");
+
+    search.city = city;
+    search.country = country;
+
+    this.setState({
+      search
+    });
+  }
+
+  findLocation() {
     axios
       .get(`https://get.geojs.io/v1/ip/geo.json`)
       .then(response => {
         this.getWeather("", response.data.latitude, response.data.longitude);
       })
       .catch(error => console.log(error));
-  };
+  }
 
   getWeather = (event, latitude, longitude) => {
     if (event) event.preventDefault();
 
     const search = { ...this.state.search };
-    const searchedCity = this.state.search.city;
-    const searchedCountry = this.state.search.country;
+
     // console.log(new Date().getTime());
 
     let url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-    if (Boolean(this.state.search.city)) {
+    if (Boolean(localStorage.getItem("location"))) {
+      const searchedCity = this.state.search.city;
+      const searchedCountry = this.state.search.country;
+
       url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
     }
 
@@ -54,6 +74,12 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
+          if (!Boolean(localStorage.getItem("location"))) {
+            localStorage.setItem("location", [
+              `${response.data.name},${response.data.sys.country}`
+            ]);
+          }
+
           const requestDate = String(new Date());
           search.city = response.data.name;
           search.country = response.data.sys.country;
