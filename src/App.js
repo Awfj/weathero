@@ -22,10 +22,10 @@ class App extends Component {
     }
   };
   componentDidMount() {
-    this.findLocation();
-
-    if (Boolean(localStorage.getItem("location"))) {
+    if (localStorage.getItem("location")) {
       this.getStoredLocation();
+    } else {
+      this.findLocation();
     }
   }
 
@@ -36,6 +36,12 @@ class App extends Component {
 
     search.city = city;
     search.country = country;
+
+    const storedSearchedData = localStorage
+      .getItem(`${city}, ${country}`)
+      .split(",");
+
+    this.updateState(storedSearchedData, search);
 
     this.setState({
       search
@@ -59,7 +65,7 @@ class App extends Component {
     // console.log(new Date().getTime());
 
     let url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-    if (Boolean(localStorage.getItem("location"))) {
+    if (localStorage.getItem("location")) {
       const searchedCity = this.state.search.city;
       const searchedCountry = this.state.search.country;
 
@@ -74,7 +80,7 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
-          if (!Boolean(localStorage.getItem("location"))) {
+          if (!localStorage.getItem("location")) {
             localStorage.setItem("location", [
               `${response.data.name},${response.data.sys.country}`
             ]);
@@ -113,31 +119,14 @@ class App extends Component {
   getStoredData() {
     const search = { ...this.state.search };
 
-    if (
-      Boolean(
-        localStorage.getItem(
-          `${this.state.search.city}, ${this.state.search.country}`
-        )
-      )
-    ) {
-      const storedSearchedData = localStorage
-        .getItem(`${this.state.search.city}, ${this.state.search.country}`)
-        .split(",");
+    const storedSearchedData = localStorage
+      .getItem(`${this.state.search.city}, ${this.state.search.country}`)
+      .split(",");
 
-      search.city = storedSearchedData[1];
-      search.country = storedSearchedData[2];
+    search.city = storedSearchedData[1];
+    search.country = storedSearchedData[2];
 
-      this.updateState(storedSearchedData, search);
-    } else {
-      const storedStateData = localStorage
-        .getItem(`${this.state.city}, ${this.state.country}`)
-        .split(",");
-
-      search.city = storedStateData[1];
-      search.country = storedStateData[2];
-
-      this.updateState(storedStateData, search);
-    }
+    this.updateState(storedSearchedData, search);
   }
 
   updateState(storedData, search) {
