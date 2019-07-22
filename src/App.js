@@ -4,10 +4,12 @@ import axios from "axios";
 import "./App.css";
 
 const OPENWEATHERMAP_KEY = process.env.REACT_APP_OPENWEATHERMAP_KEY;
+const APIXU_KEY = process.env.REACT_APP_APIXU_KEY;
 
 class App extends Component {
   state = {
-    serviceName: "OpenWeatherMap",
+    services: ["OpenWeatherMap", "APIXU"],
+    currentService: "OpenWeatherMap",
     city: undefined,
     country: undefined,
     temperature: undefined,
@@ -23,6 +25,11 @@ class App extends Component {
     }
   };
   componentDidMount() {
+    // axios
+    //   .get(`https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=Paris`)
+    //   .then(request => console.log(request.data))
+    //   .catch(error => console.log(error));
+
     if (localStorage.getItem("location")) {
       this.getStoredLocation();
       this.updateLocalStorage();
@@ -32,7 +39,9 @@ class App extends Component {
   }
 
   updateLocalStorage() {
-    const [city, country] = localStorage.getItem("location").split(",");
+    const [currentService, city, country] = localStorage
+      .getItem("location")
+      .split(",");
 
     for (let key in localStorage) {
       if (typeof localStorage[key] === "string") {
@@ -44,7 +53,7 @@ class App extends Component {
           storedData[7] &&
           currentDateInMs - storedData[7] > expirationDateInMs
         ) {
-          if (`${city}, ${country}` !== key) {
+          if (`${currentService}, ${city}, ${country}` !== key) {
             localStorage.removeItem(key);
           } else {
             this.getWeather("", city, country);
@@ -58,16 +67,18 @@ class App extends Component {
     }
   }
 
-  getStoredLocation() {
+  getStoredLocation = () => {
     const search = { ...this.state.search };
 
-    const [city, country] = localStorage.getItem("location").split(",");
+    const [currentService, city, country] = localStorage
+      .getItem("location")
+      .split(",");
 
     search.city = city;
     search.country = country;
 
     const storedSearchedData = localStorage
-      .getItem(`${city}, ${country}`)
+      .getItem(`${currentService}, ${city}, ${country}`)
       .split(",");
 
     this.updateState(storedSearchedData, search);
@@ -75,79 +86,66 @@ class App extends Component {
     this.setState({
       search
     });
-  }
+  };
 
-  findLocation() {
+  findLocation = () => {
     axios
       .get(`https://get.geojs.io/v1/ip/geo.json`)
       .then(response => {
         this.getWeather("", response.data.latitude, response.data.longitude);
       })
       .catch(error => console.log(error));
-  }
+  };
 
-  getWeather = (event, arg1, arg2) => {
+  getWeather = (event, ...args) => {
     if (event) event.preventDefault();
-
-    let searchedCity = this.state.search.city;
-    let searchedCountry = this.state.search.country;
-
-    if (localStorage.getItem("location") && arg1 && arg2) {
-      searchedCity = arg1;
-      searchedCountry = arg2;
-    }
-
-    let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-
-    if (!localStorage.getItem("location")) {
-      const latitude = arg1;
-      const longitude = arg2;
-
-      url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-    }
 
     if (
       !localStorage.getItem(
-        `${this.state.search.city}, ${this.state.search.country}`
+        `${this.state.currentService}, ${this.state.search.city}, ${
+          this.state.search.country
+        }`
       )
     ) {
+      let searchedCity = this.state.search.city;
+      let searchedCountry = this.state.search.country;
+
+      if (localStorage.getItem("location") && args[0] && args[1]) {
+        searchedCity = args[0];
+        searchedCountry = args[1];
+      }
+
+      let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+      
+      if (!localStorage.getItem("location")) {
+        const latitude = args[0];
+        const longitude = args[1];
+        url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+      }
+
       axios
         .get(url)
         .then(response => {
           if (!localStorage.getItem("location")) {
             localStorage.setItem("location", [
-              `${response.data.name},${response.data.sys.country}`
+              `${this.state.currentService},${response.data.name},${
+                response.data.sys.country
+              }`
             ]);
           }
 
           const search = { ...this.state.search };
-          const requestDate = String(new Date());
-          const requestDateInMs = new Date().getTime();
-
           search.city = response.data.name;
           search.country = response.data.sys.country;
 
-          this.setState({
-            city: response.data.name,
-            country: response.data.sys.country,
-            temperature: response.data.main.temp,
-            humidity: response.data.main.humidity,
-            description: response.data.weather[0].description,
-            requestDate,
-            requestDateInMs,
+          this.setRequestedData(
+            response.data.name,
+            response.data.sys.country,
+            response.data.main.temp,
+            response.data.main.humidity,
+            response.data.weather[0].description,
             search
-          });
-
-          localStorage.setItem(`${this.state.city}, ${this.state.country}`, [
-            this.state.serviceName,
-            this.state.city,
-            this.state.country,
-            this.state.temperature,
-            this.state.humidity,
-            this.state.description,
-            this.state.requestDate,
-            this.state.requestDateInMs
-          ]);
+          );
         })
         .catch(error => console.log(error));
     } else {
@@ -155,22 +153,56 @@ class App extends Component {
     }
   };
 
-  getStoredData() {
+  setRequestedData = (...args) => {
+    const requestDate = String(new Date());
+    const requestDateInMs = new Date().getTime();
+
+    this.setState({
+      city: args[0],
+      country: args[1],
+      temperature: args[2],
+      humidity: args[3],
+      description: args[4],
+      requestDate,
+      requestDateInMs,
+      search: args[5]
+    });
+
+    localStorage.setItem(
+      `${this.state.currentService}, ${this.state.city}, ${this.state.country}`,
+      [
+        this.state.currentService,
+        this.state.city,
+        this.state.country,
+        this.state.temperature,
+        this.state.humidity,
+        this.state.description,
+        this.state.requestDate,
+        this.state.requestDateInMs
+      ]
+    );
+  };
+
+  getStoredData = () => {
     const search = { ...this.state.search };
 
     const storedSearchedData = localStorage
-      .getItem(`${this.state.search.city}, ${this.state.search.country}`)
+      .getItem(
+        `${this.state.currentService}, ${this.state.search.city}, ${
+          this.state.search.country
+        }`
+      )
       .split(",");
 
     search.city = storedSearchedData[1];
     search.country = storedSearchedData[2];
 
     this.updateState(storedSearchedData, search);
-  }
+  };
 
-  updateState(storedData, search) {
+  updateState = (storedData, search) => {
     const [
-      serviceName,
+      currentService,
       city,
       country,
       temperature,
@@ -181,7 +213,7 @@ class App extends Component {
     ] = storedData;
 
     this.setState({
-      serviceName,
+      currentService,
       city,
       country,
       temperature,
@@ -191,7 +223,7 @@ class App extends Component {
       requestDateInMs,
       search
     });
-  }
+  };
 
   changeInputValue = event => {
     const search = { ...this.state.search };
@@ -204,12 +236,24 @@ class App extends Component {
     this.setState({ search });
   };
 
+  changeService = () => {
+    const currentService =
+      this.state.currentService === this.state.services[0]
+        ? this.state.services[1]
+        : this.state.services[0];
+
+    this.setState({ currentService });
+  };
+
   render() {
     // console.log(this.state);
     return (
       <div className="App">
         <header className="App-header">
           <h1>Weathero</h1>
+
+          <h3>{this.state.currentService}</h3>
+          <button onClick={this.changeService}>Change Service</button>
 
           <form onSubmit={this.getWeather}>
             <input
@@ -246,7 +290,7 @@ class App extends Component {
 
             {this.state.requestDate && (
               <p>
-                The data was requested on {this.state.requestDate}. It could be
+                The data was requested on {this.state.requestDate}. It can be
                 updated after 2 hours since the request was made.
               </p>
             )}
