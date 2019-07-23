@@ -26,8 +26,11 @@ class App extends Component {
     //   .get(`https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=Paris`)
     //   .then(request => console.log(request.data))
     //   .catch(error => console.log(error));
+    
+    const storedService = localStorage.getItem("service");
+    const storedCity = localStorage.getItem("city");
 
-    if (localStorage.getItem("service, location")) {
+    if (storedService && storedCity) {
       this.getStoredLocation();
       this.updateLocalStorage();
     } else {
@@ -37,26 +40,24 @@ class App extends Component {
 
   // if service and location are stored and app is reloaded, fixes the state
   getStoredLocation = () => {
-    const [currentService, city] = localStorage
-      .getItem("service, location")
-      .split(",");
+    const storedService = localStorage.getItem("service");
+    const storedCity = localStorage.getItem("city");
 
     const storedSearchedData = localStorage
-      .getItem(`${currentService}, ${city}`)
+      .getItem(`${storedService}, ${storedCity}`)
       .split(",");
 
-    this.updateState(storedSearchedData, city);
+    this.updateState(storedSearchedData, storedCity);
 
     this.setState({
-      searchedCity: city
+      searchedCity: storedCity
     });
   };
 
   // if service and location are stored, removes expired data
   updateLocalStorage() {
-    const [currentService, city] = localStorage
-      .getItem("service, location")
-      .split(",");
+    const storedService = localStorage.getItem("service");
+    const storedCity = localStorage.getItem("city");
 
     for (let key in localStorage) {
       if (typeof localStorage[key] === "string") {
@@ -68,10 +69,10 @@ class App extends Component {
           storedData[7] &&
           currentDateInMs - storedData[7] > expirationDateInMs
         ) {
-          if (`${currentService}, ${city}` !== key) {
+          if (`${storedService}, ${storedCity}` !== key) {
             localStorage.removeItem(key);
           } else {
-            this.getWeather("", city);
+            this.getWeather("", storedCity);
           }
         } else {
           continue;
@@ -95,15 +96,17 @@ class App extends Component {
   getWeather = (event, ...args) => {
     if (event) event.preventDefault();
 
+    const searchedCity = document.forms.searchForm.city.value;
     const isItemStored = localStorage.getItem(
       `${this.state.currentService}, ${this.state.searchedCity}`
     );
-    console.log(document.forms.searchForm.city.value)
+    console.log(searchedCity);
     if (!isItemStored) {
-      const isLocationStored = localStorage.getItem("service, location");
+      const storedService = localStorage.getItem("service");
+      const storedCity = localStorage.getItem("city");
       let searchedCity = this.state.searchedCity;
 
-      if (isLocationStored && args[0]) {
+      if (storedService && storedCity && args[0]) {
         searchedCity = args[0];
       }
 
@@ -113,7 +116,7 @@ class App extends Component {
       if (isAPIXU) {
         url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
       }
-      if (!isLocationStored) {
+      if (!(storedService && storedCity)) {
         const latitude = args[0];
         const longitude = args[1];
         url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
@@ -122,19 +125,19 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
+          console.log(response.data);
           if (isAPIXU) {
             this.setRequestedData(
               response.data.location.name,
               response.data.location.country,
               response.data.current.temp_c,
               response.data.current.humidity,
-              response.data.current.condition.text,
+              response.data.current.condition.text
             );
           } else {
-            if (!isLocationStored) {
-              localStorage.setItem("service, location", [
-                `${this.state.currentService},${response.data.name}`
-              ]);
+            if (!(storedService && storedCity)) {
+              localStorage.setItem("service", this.state.currentService);
+              localStorage.setItem("city", response.data.name);
             }
 
             this.setRequestedData(
@@ -142,7 +145,7 @@ class App extends Component {
               response.data.sys.country,
               response.data.main.temp,
               response.data.main.humidity,
-              response.data.weather[0].description,
+              response.data.weather[0].description
             );
           }
         })
@@ -223,10 +226,7 @@ class App extends Component {
         ? this.state.services[1]
         : this.state.services[0];
 
-    localStorage.setItem("service, location", [
-      currentService,
-      this.state.city
-    ]);
+    localStorage.setItem("service", currentService);
 
     this.setState({ currentService });
   };
@@ -241,7 +241,7 @@ class App extends Component {
           <h3>{this.state.currentService}</h3>
           <button onClick={this.changeService}>Change Service</button>
 
-          <form name='searchForm' onSubmit={this.getWeather}>
+          <form name="searchForm" onSubmit={this.getWeather}>
             <input
               onChange={this.changeInputValue}
               type="text"
