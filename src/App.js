@@ -18,15 +18,18 @@ class App extends Component {
     error: undefined,
     requestDate: undefined,
     requestDateInMs: undefined,
-    location: undefined,
-    searchedCity: ""
+    location: undefined
   };
   componentDidMount() {
     // axios
     //   .get(`https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=Paris`)
     //   .then(request => console.log(request.data))
     //   .catch(error => console.log(error));
-    
+
+    this.initialSetup();
+  }
+
+  initialSetup = () => {
     const storedService = localStorage.getItem("service");
     const storedCity = localStorage.getItem("city");
 
@@ -36,7 +39,7 @@ class App extends Component {
     } else {
       this.findLocation();
     }
-  }
+  };
 
   // if service and location are stored and app is reloaded, fixes the state
   getStoredLocation = () => {
@@ -47,11 +50,7 @@ class App extends Component {
       .getItem(`${storedService}, ${storedCity}`)
       .split(",");
 
-    this.updateState(storedSearchedData, storedCity);
-
-    this.setState({
-      searchedCity: storedCity
-    });
+    this.updateState(storedSearchedData);
   };
 
   // if service and location are stored, removes expired data
@@ -96,15 +95,14 @@ class App extends Component {
   getWeather = (event, ...args) => {
     if (event) event.preventDefault();
 
-    const searchedCity = document.forms.searchForm.city.value;
+    let searchedCity = document.forms.searchForm.city.value;
     const isItemStored = localStorage.getItem(
-      `${this.state.currentService}, ${this.state.searchedCity}`
+      `${this.state.currentService}, ${searchedCity}`
     );
-    console.log(searchedCity);
+    // console.log(searchedCity);
     if (!isItemStored) {
       const storedService = localStorage.getItem("service");
       const storedCity = localStorage.getItem("city");
-      let searchedCity = this.state.searchedCity;
 
       if (storedService && storedCity && args[0]) {
         searchedCity = args[0];
@@ -166,8 +164,7 @@ class App extends Component {
       humidity: args[3],
       description: args[4],
       requestDate,
-      requestDateInMs,
-      searchedCity: args[0]
+      requestDateInMs
     });
 
     localStorage.setItem(`${this.state.currentService}, ${this.state.city}`, [
@@ -183,14 +180,15 @@ class App extends Component {
   };
 
   getStoredData = () => {
+    const searchedCity = document.forms.searchForm.city.value;
     const storedSearchedData = localStorage
-      .getItem(`${this.state.currentService}, ${this.state.searchedCity}`)
+      .getItem(`${this.state.currentService}, ${searchedCity}`)
       .split(",");
 
-    this.updateState(storedSearchedData, storedSearchedData[1]);
+    this.updateState(storedSearchedData);
   };
 
-  updateState = (storedData, searchedCity) => {
+  updateState = storedData => {
     const [
       currentService,
       city,
@@ -210,14 +208,8 @@ class App extends Component {
       humidity,
       description,
       requestDate,
-      requestDateInMs,
-      searchedCity
+      requestDateInMs
     });
-  };
-
-  changeInputValue = event => {
-    const value = event.target.value;
-    this.setState({ searchedCity: value });
   };
 
   changeService = () => {
@@ -242,13 +234,7 @@ class App extends Component {
           <button onClick={this.changeService}>Change Service</button>
 
           <form name="searchForm" onSubmit={this.getWeather}>
-            <input
-              onChange={this.changeInputValue}
-              type="text"
-              name="city"
-              placeholder="City..."
-              value={this.state.searchedCity}
-            />
+            <input type="text" name="city" placeholder="Type a city name..." />
             <button>Get Weather</button>
           </form>
 
