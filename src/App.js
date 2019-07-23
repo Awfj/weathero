@@ -19,10 +19,7 @@ class App extends Component {
     requestDate: undefined,
     requestDateInMs: undefined,
     location: undefined,
-    search: {
-      city: "",
-      country: ""
-    }
+    searchedCity: ""
   };
   componentDidMount() {
     // axios
@@ -40,22 +37,18 @@ class App extends Component {
 
   // if service and location are stored and app is reloaded, fixes the state
   getStoredLocation = () => {
-    const search = { ...this.state.search };
-
     const [currentService, city] = localStorage
       .getItem("service, location")
       .split(",");
-
-    search.city = city;
 
     const storedSearchedData = localStorage
       .getItem(`${currentService}, ${city}`)
       .split(",");
 
-    this.updateState(storedSearchedData, search);
+    this.updateState(storedSearchedData, city);
 
     this.setState({
-      search
+      searchedCity: city
     });
   };
 
@@ -103,12 +96,12 @@ class App extends Component {
     if (event) event.preventDefault();
 
     const isItemStored = localStorage.getItem(
-      `${this.state.currentService}, ${this.state.search.city}`
+      `${this.state.currentService}, ${this.state.searchedCity}`
     );
-
+    console.log(document.forms.searchForm.city.value)
     if (!isItemStored) {
       const isLocationStored = localStorage.getItem("service, location");
-      let searchedCity = this.state.search.city;
+      let searchedCity = this.state.searchedCity;
 
       if (isLocationStored && args[0]) {
         searchedCity = args[0];
@@ -129,24 +122,15 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
-          const search = { ...this.state.search };
-
           if (isAPIXU) {
-            search.city = response.data.location.name;
-            search.country = response.data.location.country;
-
             this.setRequestedData(
               response.data.location.name,
               response.data.location.country,
               response.data.current.temp_c,
               response.data.current.humidity,
               response.data.current.condition.text,
-              search
             );
           } else {
-            search.city = response.data.name;
-            search.country = response.data.sys.country;
-
             if (!isLocationStored) {
               localStorage.setItem("service, location", [
                 `${this.state.currentService},${response.data.name}`
@@ -159,7 +143,6 @@ class App extends Component {
               response.data.main.temp,
               response.data.main.humidity,
               response.data.weather[0].description,
-              search
             );
           }
         })
@@ -181,7 +164,7 @@ class App extends Component {
       description: args[4],
       requestDate,
       requestDateInMs,
-      search: args[5]
+      searchedCity: args[0]
     });
 
     localStorage.setItem(`${this.state.currentService}, ${this.state.city}`, [
@@ -197,18 +180,14 @@ class App extends Component {
   };
 
   getStoredData = () => {
-    const search = { ...this.state.search };
-
     const storedSearchedData = localStorage
-      .getItem(`${this.state.currentService}, ${this.state.search.city}`)
+      .getItem(`${this.state.currentService}, ${this.state.searchedCity}`)
       .split(",");
 
-    search.city = storedSearchedData[1];
-
-    this.updateState(storedSearchedData, search);
+    this.updateState(storedSearchedData, storedSearchedData[1]);
   };
 
-  updateState = (storedData, search) => {
+  updateState = (storedData, searchedCity) => {
     const [
       currentService,
       city,
@@ -229,19 +208,13 @@ class App extends Component {
       description,
       requestDate,
       requestDateInMs,
-      search
+      searchedCity
     });
   };
 
   changeInputValue = event => {
-    const search = { ...this.state.search };
     const value = event.target.value;
-
-    event.target.name === "city"
-      ? (search.city = value)
-      : (search.country = value);
-
-    this.setState({ search });
+    this.setState({ searchedCity: value });
   };
 
   changeService = () => {
@@ -268,13 +241,13 @@ class App extends Component {
           <h3>{this.state.currentService}</h3>
           <button onClick={this.changeService}>Change Service</button>
 
-          <form onSubmit={this.getWeather}>
+          <form name='searchForm' onSubmit={this.getWeather}>
             <input
               onChange={this.changeInputValue}
               type="text"
               name="city"
               placeholder="City..."
-              value={this.state.search.city}
+              value={this.state.searchedCity}
             />
             <button>Get Weather</button>
           </form>
