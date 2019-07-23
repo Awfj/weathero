@@ -21,36 +21,38 @@ class App extends Component {
     location: undefined
   };
   componentDidMount() {
-    // axios
-    //   .get(`https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=Paris`)
-    //   .then(request => console.log(request.data))
-    //   .catch(error => console.log(error));
-
     this.initialSetup();
   }
 
   initialSetup = () => {
     const storedService = localStorage.getItem("service");
     const storedCity = localStorage.getItem("city");
+    // console.log(this.state.currentService, storedService);
+
+    if (storedService && this.state.currentService !== storedService)
+      this.setState({ currentService: storedService });
 
     if (storedService && storedCity) {
-      this.getStoredLocation();
+      this.fixRefreshedState();
       this.updateLocalStorage();
     } else {
       this.findLocation();
     }
   };
 
-  // if service and location are stored and app is reloaded, fixes the state
-  getStoredLocation = () => {
+  // if service and location are stored and app is reloaded
+  fixRefreshedState = () => {
     const storedService = localStorage.getItem("service");
     const storedCity = localStorage.getItem("city");
+    const storedWeather = localStorage.getItem(
+      `${storedService}, ${storedCity}`
+    );
 
-    const storedSearchedData = localStorage
-      .getItem(`${storedService}, ${storedCity}`)
-      .split(",");
-
-    this.updateState(storedSearchedData);
+    if (storedWeather) {
+      this.updateState(storedWeather.split(","));
+    } else {
+      this.getWeather("", storedCity);
+    }
   };
 
   // if service and location are stored, removes expired data
@@ -63,7 +65,6 @@ class App extends Component {
         const storedData = localStorage[key].split(",");
         const currentDateInMs = new Date().getTime();
         const expirationDateInMs = 7.2e6;
-
         if (
           storedData[7] &&
           currentDateInMs - storedData[7] > expirationDateInMs
@@ -96,11 +97,11 @@ class App extends Component {
     if (event) event.preventDefault();
 
     let searchedCity = document.forms.searchForm.city.value;
-    const isItemStored = localStorage.getItem(
+    const storedWeather = localStorage.getItem(
       `${this.state.currentService}, ${searchedCity}`
     );
-    // console.log(searchedCity);
-    if (!isItemStored) {
+
+    if (!storedWeather) {
       const storedService = localStorage.getItem("service");
       const storedCity = localStorage.getItem("city");
 
@@ -123,7 +124,6 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
-          console.log(response.data);
           if (isAPIXU) {
             this.setRequestedData(
               response.data.location.name,
@@ -149,7 +149,7 @@ class App extends Component {
         })
         .catch(error => console.log(error));
     } else {
-      this.getStoredData();
+      this.getStoredWeather();
     }
   };
 
@@ -179,13 +179,13 @@ class App extends Component {
     ]);
   };
 
-  getStoredData = () => {
+  getStoredWeather = () => {
     const searchedCity = document.forms.searchForm.city.value;
-    const storedSearchedData = localStorage
+    const storedWeather = localStorage
       .getItem(`${this.state.currentService}, ${searchedCity}`)
       .split(",");
 
-    this.updateState(storedSearchedData);
+    this.updateState(storedWeather);
   };
 
   updateState = storedData => {
