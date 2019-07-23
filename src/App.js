@@ -18,7 +18,7 @@ class App extends Component {
     error: undefined,
     requestDate: undefined,
     requestDateInMs: undefined,
-    location: undefined
+    test: false
   };
   componentDidMount() {
     this.initialSetup();
@@ -96,11 +96,17 @@ class App extends Component {
   getWeather = (event, ...args) => {
     if (event) event.preventDefault();
 
-    let searchedCity = document.forms.searchForm.city.value;
+    const inputValue = document.forms.searchForm.city.value
+      .trim()
+      .toLowerCase();
+    let searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
+
     const storedWeather = localStorage.getItem(
       `${this.state.currentService}, ${searchedCity}`
     );
 
+    console.log(searchedCity);
+    console.log(storedWeather);
     if (!storedWeather) {
       const storedService = localStorage.getItem("service");
       const storedCity = localStorage.getItem("city");
@@ -180,7 +186,11 @@ class App extends Component {
   };
 
   getStoredWeather = () => {
-    const searchedCity = document.forms.searchForm.city.value;
+    const inputValue = document.forms.searchForm.city.value
+      .trim()
+      .toLowerCase();
+    const searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
+
     const storedWeather = localStorage
       .getItem(`${this.state.currentService}, ${searchedCity}`)
       .split(",");
@@ -223,8 +233,22 @@ class App extends Component {
     this.setState({ currentService });
   };
 
+  changeCity = () => {
+    const searchedCity = this.state.city;
+
+    localStorage.setItem("city", searchedCity);
+    this.setState(this.state);
+  };
+
   render() {
-    // console.log(this.state.currentService);
+    const searchedCity = this.state.city;
+    const storedCity = localStorage.getItem("city");
+
+    const changeCityBtn =
+      searchedCity !== storedCity ? (
+        <button onClick={this.changeCity}>Is your city?</button>
+      ) : null;
+
     return (
       <div className="App">
         <header className="App-header">
@@ -241,7 +265,8 @@ class App extends Component {
           <div>
             {this.state.city && this.state.city && (
               <p>
-                Location: {this.state.city}, {this.state.country}
+                Location: {this.state.city}, {this.state.country}{" "}
+                {changeCityBtn}
               </p>
             )}
             {this.state.temperature && (
