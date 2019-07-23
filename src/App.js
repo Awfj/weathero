@@ -30,7 +30,7 @@ class App extends Component {
     //   .then(request => console.log(request.data))
     //   .catch(error => console.log(error));
 
-    if (localStorage.getItem("location")) {
+    if (localStorage.getItem("service, location")) {
       this.getStoredLocation();
       this.updateLocalStorage();
     } else {
@@ -38,9 +38,31 @@ class App extends Component {
     }
   }
 
+  // if service and location are stored and app is reloaded, fixes the state
+  getStoredLocation = () => {
+    const search = { ...this.state.search };
+
+    const [currentService, city] = localStorage
+      .getItem("service, location")
+      .split(",");
+
+    search.city = city;
+
+    const storedSearchedData = localStorage
+      .getItem(`${currentService}, ${city}`)
+      .split(",");
+
+    this.updateState(storedSearchedData, search);
+
+    this.setState({
+      search
+    });
+  };
+
+  // if service and location are stored, removes expired data
   updateLocalStorage() {
-    const [currentService, city, country] = localStorage
-      .getItem("location")
+    const [currentService, city] = localStorage
+      .getItem("service, location")
       .split(",");
 
     for (let key in localStorage) {
@@ -53,10 +75,10 @@ class App extends Component {
           storedData[7] &&
           currentDateInMs - storedData[7] > expirationDateInMs
         ) {
-          if (`${currentService}, ${city}, ${country}` !== key) {
+          if (`${currentService}, ${city}` !== key) {
             localStorage.removeItem(key);
           } else {
-            this.getWeather("", city, country);
+            this.getWeather("", city);
           }
         } else {
           continue;
@@ -67,27 +89,7 @@ class App extends Component {
     }
   }
 
-  getStoredLocation = () => {
-    const search = { ...this.state.search };
-
-    const [currentService, city, country] = localStorage
-      .getItem("location")
-      .split(",");
-
-    search.city = city;
-    search.country = country;
-
-    const storedSearchedData = localStorage
-      .getItem(`${currentService}, ${city}, ${country}`)
-      .split(",");
-
-    this.updateState(storedSearchedData, search);
-
-    this.setState({
-      search
-    });
-  };
-
+  // if service and location aren't stored
   findLocation = () => {
     axios
       .get(`https://get.geojs.io/v1/ip/geo.json`)
@@ -100,24 +102,25 @@ class App extends Component {
   getWeather = (event, ...args) => {
     if (event) event.preventDefault();
 
-    if (
-      !localStorage.getItem(
-        `${this.state.currentService}, ${this.state.search.city}, ${
-          this.state.search.country
-        }`
-      )
-    ) {
-      let searchedCity = this.state.search.city;
-      let searchedCountry = this.state.search.country;
+    const isItemStored = localStorage.getItem(
+      `${this.state.currentService}, ${this.state.search.city}`
+    );
 
-      if (localStorage.getItem("location") && args[0] && args[1]) {
+    if (!isItemStored) {
+      const isLocationStored = localStorage.getItem("service, location");
+      let searchedCity = this.state.search.city;
+
+      if (isLocationStored && args[0]) {
         searchedCity = args[0];
-        searchedCountry = args[1];
       }
 
-      let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity},${searchedCountry}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-      
-      if (!localStorage.getItem("location")) {
+      let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+
+      const isAPIXU = this.state.currentService === "APIXU";
+      if (isAPIXU) {
+        url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
+      }
+      if (!isLocationStored) {
         const latitude = args[0];
         const longitude = args[1];
         url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
@@ -126,26 +129,39 @@ class App extends Component {
       axios
         .get(url)
         .then(response => {
-          if (!localStorage.getItem("location")) {
-            localStorage.setItem("location", [
-              `${this.state.currentService},${response.data.name},${
-                response.data.sys.country
-              }`
-            ]);
-          }
-
           const search = { ...this.state.search };
-          search.city = response.data.name;
-          search.country = response.data.sys.country;
 
-          this.setRequestedData(
-            response.data.name,
-            response.data.sys.country,
-            response.data.main.temp,
-            response.data.main.humidity,
-            response.data.weather[0].description,
-            search
-          );
+          if (isAPIXU) {
+            search.city = response.data.location.name;
+            search.country = response.data.location.country;
+
+            this.setRequestedData(
+              response.data.location.name,
+              response.data.location.country,
+              response.data.current.temp_c,
+              response.data.current.humidity,
+              response.data.current.condition.text,
+              search
+            );
+          } else {
+            search.city = response.data.name;
+            search.country = response.data.sys.country;
+
+            if (!isLocationStored) {
+              localStorage.setItem("service, location", [
+                `${this.state.currentService},${response.data.name}`
+              ]);
+            }
+
+            this.setRequestedData(
+              response.data.name,
+              response.data.sys.country,
+              response.data.main.temp,
+              response.data.main.humidity,
+              response.data.weather[0].description,
+              search
+            );
+          }
         })
         .catch(error => console.log(error));
     } else {
@@ -168,34 +184,26 @@ class App extends Component {
       search: args[5]
     });
 
-    localStorage.setItem(
-      `${this.state.currentService}, ${this.state.city}, ${this.state.country}`,
-      [
-        this.state.currentService,
-        this.state.city,
-        this.state.country,
-        this.state.temperature,
-        this.state.humidity,
-        this.state.description,
-        this.state.requestDate,
-        this.state.requestDateInMs
-      ]
-    );
+    localStorage.setItem(`${this.state.currentService}, ${this.state.city}`, [
+      this.state.currentService,
+      this.state.city,
+      this.state.country,
+      this.state.temperature,
+      this.state.humidity,
+      this.state.description,
+      this.state.requestDate,
+      this.state.requestDateInMs
+    ]);
   };
 
   getStoredData = () => {
     const search = { ...this.state.search };
 
     const storedSearchedData = localStorage
-      .getItem(
-        `${this.state.currentService}, ${this.state.search.city}, ${
-          this.state.search.country
-        }`
-      )
+      .getItem(`${this.state.currentService}, ${this.state.search.city}`)
       .split(",");
 
     search.city = storedSearchedData[1];
-    search.country = storedSearchedData[2];
 
     this.updateState(storedSearchedData, search);
   };
@@ -242,11 +250,16 @@ class App extends Component {
         ? this.state.services[1]
         : this.state.services[0];
 
+    localStorage.setItem("service, location", [
+      currentService,
+      this.state.city
+    ]);
+
     this.setState({ currentService });
   };
 
   render() {
-    // console.log(this.state);
+    // console.log(this.state.currentService);
     return (
       <div className="App">
         <header className="App-header">
@@ -262,13 +275,6 @@ class App extends Component {
               name="city"
               placeholder="City..."
               value={this.state.search.city}
-            />
-            <input
-              onChange={this.changeInputValue}
-              type="text"
-              name="country"
-              placeholder="Country..."
-              value={this.state.search.country}
             />
             <button>Get Weather</button>
           </form>
