@@ -1,10 +1,15 @@
 import React, { Component } from "react";
 import axios from "axios";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { fas } from "@fortawesome/free-solid-svg-icons";
 
 import "./App.css";
+import Form from "./components/weather/Form/Form";
+import Result from "./components/weather/Result/Result";
 
 const OPENWEATHERMAP_KEY = process.env.REACT_APP_OPENWEATHERMAP_KEY;
 const APIXU_KEY = process.env.REACT_APP_APIXU_KEY;
+library.add(fas);
 
 class App extends Component {
   state = {
@@ -258,6 +263,7 @@ class App extends Component {
 
   clearInputField = () => {
     document.forms.searchForm.city.value = "";
+    this.setState(this.state);
   };
 
   changeService = () => {
@@ -279,69 +285,29 @@ class App extends Component {
   };
 
   render() {
-    // console.log(this.state);
-    const searchedCity = this.state.city;
-    const storedCity = localStorage.getItem("city");
-    const changeCityBtn =
-      searchedCity !== storedCity ? (
-        <button type="button" onClick={this.changeCity}>
-          Is your city?
-        </button>
-      ) : null;
-
-    let removeValueBtn = null;
-    if (document.forms.searchForm) {
-      if (document.forms.searchForm.city.value)
-        removeValueBtn = (
-          <button type="button" onClick={this.clearInputField}>
-            X
-          </button>
-        );
-    }
-
     return (
       <div className="App">
         <header className="App-header">
           <h1>Weathero</h1>
 
-          <h3>{this.state.currentService}</h3>
-          <button type="button" onClick={this.changeService}>
-            Change Service
-          </button>
+          <Form
+            getWeather={this.getWeather}
+            currentService={this.state.currentService}
+            changeService={this.changeService}
+            onInputChange={this.onInputChange}
+            clearInputField={this.clearInputField}
+          />
 
-          <form name="searchForm" onSubmit={this.getWeather}>
-            <input
-              onChange={this.onInputChange}
-              type="text"
-              name="city"
-              placeholder="Type a city name..."
-            />
-            {removeValueBtn}
-            <button type="submit">Get Weather</button>
-          </form>
-
-          <div>
-            {this.state.city && this.state.city && (
-              <p>
-                Location: {this.state.city}, {this.state.country}{" "}
-                {changeCityBtn}
-              </p>
-            )}
-            {this.state.temperature && (
-              <p>Temperature: {this.state.temperature}</p>
-            )}
-            {this.state.humidity && <p>Humidity: {this.state.humidity}</p>}
-            {this.state.description && (
-              <p>Condition: {this.state.description}</p>
-            )}
-            {this.state.requestDate && (
-              <p>
-                The data was requested on {this.state.requestDate}. It can be
-                updated after 2 hours since the request was made.
-              </p>
-            )}
-            {this.state.error && <p>{this.state.error}</p>}
-          </div>
+          <Result
+            city={this.state.city}
+            country={this.state.country}
+            changeCity={this.changeCity}
+            temperature={this.state.temperature}
+            humidity={this.state.humidity}
+            description={this.state.description}
+            requestDate={this.state.requestDate}
+            error={this.state.error}
+          />
         </header>
       </div>
     );
