@@ -1,0 +1,32 @@
+.Result {
+  p:not(:last-child) {
+    margin-bottom: 0.5em;
+  }
+  p:last-child {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 700px;
+  }
+  button {
+    font-size: 1.5rem;
+    transition: all 0.2s ease-in-out;
+
+    svg {
+      margin-bottom: -1px;
+    }
+    &:hover {
+      color: #61dafb;
+    }
+  }
+  .changeCityBtn {
+    display: block;
+    border: 1px solid white;
+    padding: 0 0.4em;
+    margin-top: 0.4em;
+    margin-left: auto;
+    margin-right: auto;
+    &:hover {
+      border: 1px solid #61dafb;
+    }
+  }
+}

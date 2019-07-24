@@ -3,9 +3,10 @@ import axios from "axios";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 
-import "./App.css";
-import Form from "./components/weather/Form/Form";
-import Result from "./components/weather/Result/Result";
+import "./App.modules.scss";
+import Form from "../components/weather/Form/Form";
+import Result from "../components/weather/Result/Result";
+import Footer from "../components/layout/Footer/Footer";
 
 const OPENWEATHERMAP_KEY = process.env.REACT_APP_OPENWEATHERMAP_KEY;
 const APIXU_KEY = process.env.REACT_APP_APIXU_KEY;
@@ -257,15 +258,6 @@ class App extends Component {
     return searchedCity;
   }
 
-  onInputChange = () => {
-    this.setState(this.state);
-  };
-
-  clearInputField = () => {
-    document.forms.searchForm.city.value = "";
-    this.setState(this.state);
-  };
-
   changeService = () => {
     const currentService =
       this.state.currentService === this.state.services[0]
@@ -287,15 +279,15 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <header className="App-header">
+        <header>
           <h1>Weathero</h1>
+        </header>
 
+        <main>
           <Form
             getWeather={this.getWeather}
             currentService={this.state.currentService}
             changeService={this.changeService}
-            onInputChange={this.onInputChange}
-            clearInputField={this.clearInputField}
           />
 
           <Result
@@ -308,7 +300,9 @@ class App extends Component {
             requestDate={this.state.requestDate}
             error={this.state.error}
           />
-        </header>
+        </main>
+
+        <Footer />
       </div>
     );
   }

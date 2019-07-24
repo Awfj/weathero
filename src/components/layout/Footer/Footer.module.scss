@@ -1,0 +1,15 @@
+.Footer {
+  margin-bottom: 1em;
+  a:after {
+    content: "";
+    display: block;
+    background: #61dafb;
+    margin: 0 auto;
+    transition: 300ms;
+    width: 0px;
+    height: 1px;
+  }
+  a:hover:after {
+    width: 100%;
+  }
+}

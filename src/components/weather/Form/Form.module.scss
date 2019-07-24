@@ -1,0 +1,79 @@
+.Form {
+  margin-bottom: 1.2em;
+  p {
+    margin-bottom: 0.8em;
+    .changeServiceBtn {
+      font-size: 1.3rem;
+      margin-left: 0.4em;
+      transition: all 0.2s ease-in-out;
+      svg {
+        margin-bottom: -2.1px;
+      }
+      &:hover {
+        color: #61dafb;
+      }
+    }
+  }
+
+  input {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 0.5em 0.7em;
+    width: 100%;
+  }
+  .getWeatherBtn {
+    border-bottom: 1px solid white;
+    border-right: 1px solid white;
+    border-left: 1px solid white;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    width: 100%;
+
+    padding: 0.21em 0.7em;
+    transition: all 0.2s ease-in-out;
+    &:hover {
+      color: #61dafb;
+      border-bottom: 1px solid #61dafb;
+      border-right: 1px solid #61dafb;
+      border-left: 1px solid #61dafb;
+    }
+  }
+}
+
+@media (min-width: 425px) {
+  .Form {
+    div {
+      display: grid;
+      grid-template-columns: 1fr auto;
+    }
+    input {
+      border-top-right-radius: 0;
+      border-bottom-left-radius: 5px;
+    }
+    .getWeatherBtn {
+      border-top: 1px solid white;
+      border-left: none;
+      border-bottom-left-radius: 0;
+      border-top-right-radius: 5px;
+      &:hover {
+        border-top: 1px solid #61dafb;
+      }
+    }
+  }
+}
+
+@media (min-width: 600px) {
+  .Form {
+    max-width: 500px;
+    margin: 0 auto 1.2em;
+    p {
+      .changeServiceBtn {
+        font-size: 1.5rem;
+        margin-left: 0.6em;
+        svg {
+          margin-bottom: -2px;
+        }
+      }
+    }
+  }
+}
