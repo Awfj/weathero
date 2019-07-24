@@ -15,10 +15,9 @@ class App extends Component {
     temperature: undefined,
     humidity: undefined,
     description: undefined,
-    error: undefined,
     requestDate: undefined,
     requestDateInMs: undefined,
-    test: false
+    error: undefined
   };
   componentDidMount() {
     this.initialSetup();
@@ -27,7 +26,6 @@ class App extends Component {
   initialSetup = () => {
     const storedService = localStorage.getItem("service");
     const storedCity = localStorage.getItem("city");
-    // console.log(this.state.currentService, storedService);
 
     if (storedService && this.state.currentService !== storedService)
       this.setState({ currentService: storedService });
@@ -90,24 +88,26 @@ class App extends Component {
       .then(response => {
         this.getWeather("", response.data.latitude, response.data.longitude);
       })
-      .catch(error => console.log(error));
+      .catch(() => {
+        this.setState({
+          error:
+            "We couldn't find your city automatically, you can still look for it manually."
+        });
+      });
   };
 
   getWeather = (event, ...args) => {
     if (event) event.preventDefault();
 
-    const inputValue = document.forms.searchForm.city.value
-      .trim()
-      .toLowerCase();
-    let searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
-
+    let searchedCity = this.handleInputValue();
     const storedWeather = localStorage.getItem(
       `${this.state.currentService}, ${searchedCity}`
     );
-
-    console.log(searchedCity);
-    console.log(storedWeather);
     if (!storedWeather) {
+      if (!searchedCity && !args[1]) {
+        return;
+      }
+
       const storedService = localStorage.getItem("service");
       const storedCity = localStorage.getItem("city");
 
@@ -117,20 +117,26 @@ class App extends Component {
 
       let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
 
-      const isAPIXU = this.state.currentService === "APIXU";
-      if (isAPIXU) {
-        url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
-      }
-      if (!(storedService && storedCity)) {
+      if (!(storedService && storedCity) && !this.state.error) {
         const latitude = args[0];
         const longitude = args[1];
         url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+      }
+
+      const isAPIXU = this.state.currentService === "APIXU";
+      if (isAPIXU) {
+        url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
       }
 
       axios
         .get(url)
         .then(response => {
           if (isAPIXU) {
+            if (!(storedService && storedCity) && this.state.error) {
+              localStorage.setItem("service", this.state.currentService);
+              localStorage.setItem("city", response.data.location.name);
+            }
+
             this.setRequestedData(
               response.data.location.name,
               response.data.location.country,
@@ -153,7 +159,19 @@ class App extends Component {
             );
           }
         })
-        .catch(error => console.log(error));
+        .catch(() => {
+          this.setState({
+            city: undefined,
+            country: undefined,
+            temperature: undefined,
+            humidity: undefined,
+            description: undefined,
+            requestDate: undefined,
+            requestDateInMs: undefined,
+            error:
+              "Requested city can't be found. Check if the name is correct, change service or try again later."
+          });
+        });
     } else {
       this.getStoredWeather();
     }
@@ -170,26 +188,24 @@ class App extends Component {
       humidity: args[3],
       description: args[4],
       requestDate,
-      requestDateInMs
+      requestDateInMs,
+      error: undefined
     });
 
-    localStorage.setItem(`${this.state.currentService}, ${this.state.city}`, [
+    localStorage.setItem(`${this.state.currentService}, ${args[0]}`, [
       this.state.currentService,
-      this.state.city,
-      this.state.country,
-      this.state.temperature,
-      this.state.humidity,
-      this.state.description,
-      this.state.requestDate,
-      this.state.requestDateInMs
+      args[0],
+      args[1],
+      args[2],
+      args[3],
+      args[4],
+      requestDate,
+      requestDateInMs
     ]);
   };
 
   getStoredWeather = () => {
-    const inputValue = document.forms.searchForm.city.value
-      .trim()
-      .toLowerCase();
-    const searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
+    const searchedCity = this.handleInputValue();
 
     const storedWeather = localStorage
       .getItem(`${this.state.currentService}, ${searchedCity}`)
@@ -218,8 +234,30 @@ class App extends Component {
       humidity,
       description,
       requestDate,
-      requestDateInMs
+      requestDateInMs,
+      error: undefined
     });
+  };
+
+  handleInputValue() {
+    const inputValue = document.forms.searchForm.city.value
+      .trim()
+      .toLowerCase();
+
+    let searchedCity = "";
+    if (inputValue) {
+      searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
+    }
+
+    return searchedCity;
+  }
+
+  onInputChange = () => {
+    this.setState(this.state);
+  };
+
+  clearInputField = () => {
+    document.forms.searchForm.city.value = "";
   };
 
   changeService = () => {
@@ -241,13 +279,25 @@ class App extends Component {
   };
 
   render() {
+    // console.log(this.state);
     const searchedCity = this.state.city;
     const storedCity = localStorage.getItem("city");
-
     const changeCityBtn =
       searchedCity !== storedCity ? (
-        <button onClick={this.changeCity}>Is your city?</button>
+        <button type="button" onClick={this.changeCity}>
+          Is your city?
+        </button>
       ) : null;
+
+    let removeValueBtn = null;
+    if (document.forms.searchForm) {
+      if (document.forms.searchForm.city.value)
+        removeValueBtn = (
+          <button type="button" onClick={this.clearInputField}>
+            X
+          </button>
+        );
+    }
 
     return (
       <div className="App">
@@ -255,11 +305,19 @@ class App extends Component {
           <h1>Weathero</h1>
 
           <h3>{this.state.currentService}</h3>
-          <button onClick={this.changeService}>Change Service</button>
+          <button type="button" onClick={this.changeService}>
+            Change Service
+          </button>
 
           <form name="searchForm" onSubmit={this.getWeather}>
-            <input type="text" name="city" placeholder="Type a city name..." />
-            <button>Get Weather</button>
+            <input
+              onChange={this.onInputChange}
+              type="text"
+              name="city"
+              placeholder="Type a city name..."
+            />
+            {removeValueBtn}
+            <button type="submit">Get Weather</button>
           </form>
 
           <div>
@@ -276,14 +334,13 @@ class App extends Component {
             {this.state.description && (
               <p>Condition: {this.state.description}</p>
             )}
-            {this.state.error && <p>{this.state.error}</p>}
-
             {this.state.requestDate && (
               <p>
                 The data was requested on {this.state.requestDate}. It can be
                 updated after 2 hours since the request was made.
               </p>
             )}
+            {this.state.error && <p>{this.state.error}</p>}
           </div>
         </header>
       </div>
