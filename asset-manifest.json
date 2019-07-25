@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/weathero/static/css/main.2f162873.chunk.css",
-    "main.js": "/weathero/static/js/main.85aa77d9.chunk.js",
-    "main.js.map": "/weathero/static/js/main.85aa77d9.chunk.js.map",
+    "main.css": "/weathero/static/css/main.579df48f.chunk.css",
+    "main.js": "/weathero/static/js/main.2a5add12.chunk.js",
+    "main.js.map": "/weathero/static/js/main.2a5add12.chunk.js.map",
     "runtime~main.js": "/weathero/static/js/runtime~main.82a2b881.js",
     "runtime~main.js.map": "/weathero/static/js/runtime~main.82a2b881.js.map",
-    "static/js/2.9a343bf5.chunk.js": "/weathero/static/js/2.9a343bf5.chunk.js",
-    "static/js/2.9a343bf5.chunk.js.map": "/weathero/static/js/2.9a343bf5.chunk.js.map",
+    "static/js/2.9c1b35b6.chunk.js": "/weathero/static/js/2.9c1b35b6.chunk.js",
+    "static/js/2.9c1b35b6.chunk.js.map": "/weathero/static/js/2.9c1b35b6.chunk.js.map",
     "index.html": "/weathero/index.html",
-    "precache-manifest.1d8494b54642fac18f5745f6b0fae001.js": "/weathero/precache-manifest.1d8494b54642fac18f5745f6b0fae001.js",
+    "precache-manifest.f4b67cf760c854ed6f7d3347b7e68570.js": "/weathero/precache-manifest.f4b67cf760c854ed6f7d3347b7e68570.js",
     "service-worker.js": "/weathero/service-worker.js",
-    "static/css/main.2f162873.chunk.css.map": "/weathero/static/css/main.2f162873.chunk.css.map"
+    "static/css/main.579df48f.chunk.css.map": "/weathero/static/css/main.579df48f.chunk.css.map"
   }
 }
