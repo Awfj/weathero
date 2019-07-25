@@ -1,6 +1,6 @@
 .Form {
-  margin-bottom: 1.2em;
-  p {
+  margin-bottom: 1em;
+  .service {
     margin-bottom: 0.8em;
     .changeServiceBtn {
       font-size: 1.3rem;
@@ -38,6 +38,10 @@
       border-left: 1px solid #61dafb;
     }
   }
+  .hint {
+    font-size: 1.35rem;
+    margin-top: 0.5em;
+  }
 }
 
 @media (min-width: 425px) {
@@ -59,6 +63,9 @@
         border-top: 1px solid #61dafb;
       }
     }
+    .hint {
+      font-size: 1.4rem;
+    }
   }
 }
 
@@ -66,7 +73,7 @@
   .Form {
     max-width: 500px;
     margin: 0 auto 1.2em;
-    p {
+    .service {
       .changeServiceBtn {
         font-size: 1.5rem;
         margin-left: 0.6em;
@@ -74,6 +81,9 @@
           margin-bottom: -2px;
         }
       }
+    }
+    .hint {
+      font-size: 1.5rem;
     }
   }
 }

@@ -10,7 +10,7 @@ const form = props => {
       onSubmit={props.getWeather}
       className={classes.Form}
     >
-      <p>
+      <p className={classes.service}>
         Service: {props.currentService}
         <button
           type="button"
@@ -27,6 +27,10 @@ const form = props => {
           Get Weather
         </button>
       </div>
+      <p className={classes.hint}>
+        It is advised to enter a full name of the city (e.g. Los Angeles, not
+        LA)
+      </p>
     </form>
   );
 };

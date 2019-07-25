@@ -3,7 +3,7 @@ import React from "react";
 import classes from "./Result.module.scss";
 
 const result = props => {
-  const searchedCity = props.city;
+  const searchedCity = props.city ? props.city.toLowerCase() : props.city;
   const storedCity = localStorage.getItem("city");
   const changeCityBtn =
     searchedCity !== storedCity ? (
@@ -18,6 +18,7 @@ const result = props => {
 
   return (
     <div className={classes.Result}>
+      <hr />
       {props.city && (
         <p>
           Location: {props.city}, {props.country} {changeCityBtn}
@@ -30,8 +31,8 @@ const result = props => {
         <div>
           <hr />
           <p>
-            The request was made on {props.requestDate}. It can be updated after
-            2 hours.
+            The weather was requested on {props.requestDate}. It can be updated
+            after 2 hours since the request was made.
           </p>
         </div>
       )}

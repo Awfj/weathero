@@ -76,7 +76,7 @@ class App extends Component {
           if (`${storedService}, ${storedCity}` !== key) {
             localStorage.removeItem(key);
           } else {
-            this.getWeather("", storedCity);
+            this.getWeather("", storedCity, true);
           }
         } else {
           continue;
@@ -109,11 +109,8 @@ class App extends Component {
     const storedWeather = localStorage.getItem(
       `${this.state.currentService}, ${searchedCity}`
     );
-    if (!storedWeather) {
-      if (!searchedCity && !args[1]) {
-        return;
-      }
 
+    if (!storedWeather) {
       const storedService = localStorage.getItem("service");
       const storedCity = localStorage.getItem("city");
 
@@ -138,31 +135,50 @@ class App extends Component {
         .get(url)
         .then(response => {
           if (isAPIXU) {
+            const cityFromResponse = response.data.location.name.toLowerCase();
+
             if (!(storedService && storedCity) && this.state.error) {
               localStorage.setItem("service", this.state.currentService);
-              localStorage.setItem("city", response.data.location.name);
+              localStorage.setItem("city", cityFromResponse);
             }
 
-            this.setRequestedData(
-              response.data.location.name,
-              response.data.location.country,
-              response.data.current.temp_c,
-              response.data.current.humidity,
-              response.data.current.condition.text
+            const requestedCityWeather = localStorage.getItem(
+              `${this.state.currentService}, ${cityFromResponse}`
             );
+            if (!requestedCityWeather || typeof args[1] === "boolean") {
+              this.setRequestedData(
+                response.data.location.name,
+                response.data.location.country,
+                response.data.current.temp_c,
+                response.data.current.humidity,
+                response.data.current.condition.text
+              );
+            } else {
+              this.getStoredWeather(cityFromResponse);
+            }
           } else {
+            const cityFromResponse = response.data.name.toLowerCase();
+
             if (!(storedService && storedCity)) {
               localStorage.setItem("service", this.state.currentService);
-              localStorage.setItem("city", response.data.name);
+              localStorage.setItem("city", cityFromResponse);
             }
 
-            this.setRequestedData(
-              response.data.name,
-              response.data.sys.country,
-              response.data.main.temp,
-              response.data.main.humidity,
-              response.data.weather[0].description
+            const requestedCityWeather = localStorage.getItem(
+              `${this.state.currentService}, ${cityFromResponse}`
             );
+
+            if (!requestedCityWeather || typeof args[1] === "boolean") {
+              this.setRequestedData(
+                response.data.name,
+                response.data.sys.country,
+                response.data.main.temp,
+                response.data.main.humidity,
+                response.data.weather[0].description
+              );
+            } else {
+              this.getStoredWeather(cityFromResponse);
+            }
           }
         })
         .catch(() => {
@@ -175,7 +191,7 @@ class App extends Component {
             requestDate: undefined,
             requestDateInMs: undefined,
             error:
-              "Requested city can't be found. Check if the name is correct, change service or try again later."
+              "Requested city can't be found. Please, check if the name is correct, change service or try again later."
           });
         });
     } else {
@@ -187,35 +203,50 @@ class App extends Component {
     const requestDate = String(new Date());
     const requestDateInMs = new Date().getTime();
 
+    let description = args[4];
+    if (args[4] === args[4].toLowerCase()) {
+      description = args[4][0].toUpperCase() + args[4].slice(1);
+    }
+
     this.setState({
       city: args[0],
       country: args[1],
       temperature: args[2],
       humidity: args[3],
-      description: args[4],
+      description,
       requestDate,
       requestDateInMs,
       error: undefined
     });
 
-    localStorage.setItem(`${this.state.currentService}, ${args[0]}`, [
-      this.state.currentService,
-      args[0],
-      args[1],
-      args[2],
-      args[3],
-      args[4],
-      requestDate,
-      requestDateInMs
-    ]);
+    localStorage.setItem(
+      `${this.state.currentService}, ${args[0].toLowerCase()}`,
+      [
+        this.state.currentService,
+        args[0],
+        args[1],
+        args[2],
+        args[3],
+        description,
+        requestDate,
+        requestDateInMs
+      ]
+    );
   };
 
-  getStoredWeather = () => {
-    const searchedCity = this.handleInputValue();
+  getStoredWeather = cityFromResponse => {
+    let storedWeather;
 
-    const storedWeather = localStorage
-      .getItem(`${this.state.currentService}, ${searchedCity}`)
-      .split(",");
+    if (!cityFromResponse) {
+      const searchedCity = this.handleInputValue();
+      storedWeather = localStorage
+        .getItem(`${this.state.currentService}, ${searchedCity}`)
+        .split(",");
+    } else {
+      storedWeather = localStorage
+        .getItem(`${this.state.currentService}, ${cityFromResponse}`)
+        .split(",");
+    }
 
     this.updateState(storedWeather);
   };
@@ -246,14 +277,9 @@ class App extends Component {
   };
 
   handleInputValue() {
-    const inputValue = document.forms.searchForm.city.value
+    const searchedCity = document.forms.searchForm.city.value
       .trim()
       .toLowerCase();
-
-    let searchedCity = "";
-    if (inputValue) {
-      searchedCity = inputValue[0].toUpperCase() + inputValue.slice(1);
-    }
 
     return searchedCity;
   }
@@ -270,9 +296,7 @@ class App extends Component {
   };
 
   changeCity = () => {
-    const searchedCity = this.state.city;
-
-    localStorage.setItem("city", searchedCity);
+    localStorage.setItem("city", this.state.city.toLowerCase());
     this.setState(this.state);
   };
 
