@@ -7,8 +7,8 @@ const form = props => {
   return (
     <form
       name="searchForm"
-      onSubmit={props.getWeather}
       className={classes.Form}
+      onSubmit={props.manualWeatherRequest}
     >
       <p className={classes.service}>
         Service: {props.currentService}

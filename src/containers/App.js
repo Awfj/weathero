@@ -21,8 +21,8 @@ class App extends Component {
     temperature: undefined,
     humidity: undefined,
     description: undefined,
+    fullRequestDate: undefined,
     requestDate: undefined,
-    requestDateInMs: undefined,
     error: undefined
   };
   componentDidMount() {
@@ -30,53 +30,60 @@ class App extends Component {
   }
 
   initialSetup = () => {
-    const storedService = localStorage.getItem("service");
-    const storedCity = localStorage.getItem("city");
+    const service = localStorage.getItem("service");
+    const city = localStorage.getItem("city");
 
-    if (storedService && this.state.currentService !== storedService)
-      this.setState({ currentService: storedService });
+    if (service && this.state.currentService !== service)
+      this.setState({ currentService: service });
 
-    if (storedService && storedCity) {
-      this.fixRefreshedState();
-      this.updateLocalStorage();
+    if (service && city) {
+      this.fixState(service, city);
+      this.updateStorage(service, city);
     } else {
       this.findLocation();
     }
   };
 
+  // if service and location aren't stored
+  findLocation = () => {
+    axios
+      .get(`https://get.geojs.io/v1/ip/geo.json`)
+      .then(response => {
+        this.autoWeatherRequest(null, [
+          response.data.latitude,
+          response.data.longitude
+        ]);
+      })
+      .catch(() => {
+        this.setState({
+          error: `We couldn't find your city automatically, 
+            you can still look for it manually.`
+        });
+      });
+  };
+
   // if service and location are stored and app is reloaded
-  fixRefreshedState = () => {
-    const storedService = localStorage.getItem("service");
-    const storedCity = localStorage.getItem("city");
-    const storedWeather = localStorage.getItem(
-      `${storedService}, ${storedCity}`
-    );
+  fixState = (service, city) => {
+    const storedWeather = localStorage.getItem(`${service}, ${city}`);
 
     if (storedWeather) {
-      this.updateState(storedWeather.split(","));
+      this.updateState(storedWeather);
     } else {
-      this.getWeather("", storedCity);
+      this.autoWeatherRequest(city);
     }
   };
 
   // if service and location are stored, removes expired data
-  updateLocalStorage() {
-    const storedService = localStorage.getItem("service");
-    const storedCity = localStorage.getItem("city");
-
+  updateStorage(service, city) {
     for (let key in localStorage) {
       if (typeof localStorage[key] === "string") {
-        const storedData = localStorage[key].split(",");
-        const currentDateInMs = new Date().getTime();
-        const expirationDateInMs = 7.2e6;
-        if (
-          storedData[7] &&
-          currentDateInMs - storedData[7] > expirationDateInMs
-        ) {
-          if (`${storedService}, ${storedCity}` !== key) {
+        const storedWeather = localStorage[key].split(",");
+
+        if (storedWeather[7] && this.checkIfExpired(storedWeather[7])) {
+          if (`${service}, ${city}` !== key) {
             localStorage.removeItem(key);
           } else {
-            this.getWeather("", storedCity, true);
+            this.autoWeatherRequest(city);
           }
         } else {
           continue;
@@ -87,202 +94,154 @@ class App extends Component {
     }
   }
 
-  // if service and location aren't stored
-  findLocation = () => {
-    axios
-      .get(`https://get.geojs.io/v1/ip/geo.json`)
-      .then(response => {
-        this.getWeather("", response.data.latitude, response.data.longitude);
-      })
-      .catch(() => {
-        this.setState({
-          error:
-            "We couldn't find your city automatically, you can still look for it manually."
-        });
-      });
+  // when app is reloaded
+  autoWeatherRequest = (storedCity, coordinates) => {
+    let url = "";
+
+    if (coordinates) {
+      url = `https://api.openweathermap.org/data/2.5/weather?lat=${
+        coordinates[0]
+      }&lon=${coordinates[1]}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+    } else {
+      url = this.chooseURL(storedCity);
+    }
+    this.getWeather(url);
   };
 
-  getWeather = (event, ...args) => {
-    if (event) event.preventDefault();
+  manualWeatherRequest = event => {
+    event.preventDefault();
 
-    let searchedCity = this.handleInputValue();
+    const inputValue = document.forms.searchForm.city.value.trim();
+    if (!inputValue) return;
+
+    const searchedCity = inputValue.toLowerCase();
     const storedWeather = localStorage.getItem(
       `${this.state.currentService}, ${searchedCity}`
     );
 
-    if (!storedWeather) {
-      const storedService = localStorage.getItem("service");
-      const storedCity = localStorage.getItem("city");
-
-      if (storedService && storedCity && args[0]) {
-        searchedCity = args[0];
-      }
-
-      let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-
-      if (!(storedService && storedCity) && !this.state.error) {
-        const latitude = args[0];
-        const longitude = args[1];
-        url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
-      }
-
-      const isAPIXU = this.state.currentService === "APIXU";
-      if (isAPIXU) {
-        url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
-      }
-
-      axios
-        .get(url)
-        .then(response => {
-          if (isAPIXU) {
-            const cityFromResponse = response.data.location.name.toLowerCase();
-
-            if (!(storedService && storedCity) && this.state.error) {
-              localStorage.setItem("service", this.state.currentService);
-              localStorage.setItem("city", cityFromResponse);
-            }
-
-            const requestedCityWeather = localStorage.getItem(
-              `${this.state.currentService}, ${cityFromResponse}`
-            );
-            if (!requestedCityWeather || typeof args[1] === "boolean") {
-              this.setRequestedData(
-                response.data.location.name,
-                response.data.location.country,
-                response.data.current.temp_c,
-                response.data.current.humidity,
-                response.data.current.condition.text
-              );
-            } else {
-              this.getStoredWeather(cityFromResponse);
-            }
-          } else {
-            const cityFromResponse = response.data.name.toLowerCase();
-
-            if (!(storedService && storedCity)) {
-              localStorage.setItem("service", this.state.currentService);
-              localStorage.setItem("city", cityFromResponse);
-            }
-
-            const requestedCityWeather = localStorage.getItem(
-              `${this.state.currentService}, ${cityFromResponse}`
-            );
-
-            if (!requestedCityWeather || typeof args[1] === "boolean") {
-              this.setRequestedData(
-                response.data.name,
-                response.data.sys.country,
-                response.data.main.temp,
-                response.data.main.humidity,
-                response.data.weather[0].description
-              );
-            } else {
-              this.getStoredWeather(cityFromResponse);
-            }
-          }
-        })
-        .catch(() => {
-          this.setState({
-            city: undefined,
-            country: undefined,
-            temperature: undefined,
-            humidity: undefined,
-            description: undefined,
-            requestDate: undefined,
-            requestDateInMs: undefined,
-            error:
-              "Requested city can't be found. Please, check if the name is correct, change service or try again later."
-          });
-        });
+    if (!storedWeather || this.checkIfExpired(storedWeather.split(",")[7])) {
+      const url = this.chooseURL(searchedCity);
+      this.getWeather(url);
     } else {
-      this.getStoredWeather();
+      this.updateState(storedWeather);
     }
   };
 
-  setRequestedData = (...args) => {
-    const requestDate = String(new Date());
-    const requestDateInMs = new Date().getTime();
+  checkIfExpired(requestDate) {
+    const currentDate = new Date().getTime();
+    const expirationDate = 7.2e6;
+    const isExpired = currentDate - requestDate > expirationDate;
 
-    let description = args[4];
-    if (args[4] === args[4].toLowerCase()) {
-      description = args[4][0].toUpperCase() + args[4].slice(1);
-    }
-
-    this.setState({
-      city: args[0],
-      country: args[1],
-      temperature: args[2],
-      humidity: args[3],
-      description,
-      requestDate,
-      requestDateInMs,
-      error: undefined
-    });
-
-    localStorage.setItem(
-      `${this.state.currentService}, ${args[0].toLowerCase()}`,
-      [
-        this.state.currentService,
-        args[0],
-        args[1],
-        args[2],
-        args[3],
-        description,
-        requestDate,
-        requestDateInMs
-      ]
-    );
-  };
-
-  getStoredWeather = cityFromResponse => {
-    let storedWeather;
-
-    if (!cityFromResponse) {
-      const searchedCity = this.handleInputValue();
-      storedWeather = localStorage
-        .getItem(`${this.state.currentService}, ${searchedCity}`)
-        .split(",");
-    } else {
-      storedWeather = localStorage
-        .getItem(`${this.state.currentService}, ${cityFromResponse}`)
-        .split(",");
-    }
-
-    this.updateState(storedWeather);
-  };
-
-  updateState = storedData => {
-    const [
-      currentService,
-      city,
-      country,
-      temperature,
-      humidity,
-      description,
-      requestDate,
-      requestDateInMs
-    ] = storedData;
-
-    this.setState({
-      currentService,
-      city,
-      country,
-      temperature,
-      humidity,
-      description,
-      requestDate,
-      requestDateInMs,
-      error: undefined
-    });
-  };
-
-  handleInputValue() {
-    const searchedCity = document.forms.searchForm.city.value
-      .trim()
-      .toLowerCase();
-
-    return searchedCity;
+    return isExpired;
   }
+
+  chooseURL(searchedCity) {
+    let url = `https://api.openweathermap.org/data/2.5/weather?q=${searchedCity}&appid=${OPENWEATHERMAP_KEY}&units=metric`;
+
+    if (this.state.currentService === "APIXU") {
+      url = `https://api.apixu.com/v1/current.json?key=${APIXU_KEY}&q=${searchedCity}`;
+    }
+
+    return url;
+  }
+
+  getWeather = url => {
+    const isAltService = this.state.currentService !== this.state.services[0];
+
+    axios
+      .get(url)
+      .then(response => {
+        if (isAltService) {
+          this.setWeather(
+            response.data.location.name,
+            response.data.location.country,
+            response.data.current.temp_c,
+            response.data.current.humidity,
+            response.data.current.condition.text
+          );
+        } else {
+          this.setWeather(
+            response.data.name,
+            response.data.sys.country,
+            response.data.main.temp,
+            response.data.main.humidity,
+            response.data.weather[0].description
+          );
+        }
+      })
+      .catch(() => {
+        this.setState({
+          city: undefined,
+          country: undefined,
+          temperature: undefined,
+          humidity: undefined,
+          description: undefined,
+          fullRequestDate: undefined,
+          requestDate: undefined,
+          error: `Requested city can't be found. Please, check if the name 
+            is correct, change service or try again later.`
+        });
+      });
+  };
+
+  setWeather = (...responseData) => {
+    const isServiceStored = Boolean(localStorage.getItem("service"));
+    const isCityStored = Boolean(localStorage.getItem("city"));
+    const currentService = this.state.currentService;
+    const receivedCity = responseData[0].toLowerCase();
+
+    if (!(isServiceStored && isCityStored)) {
+      localStorage.setItem("service", currentService);
+      localStorage.setItem("city", receivedCity);
+    }
+
+    const fullRequestDate = String(new Date());
+    const requestDate = new Date().getTime();
+
+    let description = responseData[4];
+    if (responseData[4] === responseData[4].toLowerCase()) {
+      description = responseData[4][0].toUpperCase() + responseData[4].slice(1);
+    }
+
+    this.setState({
+      city: responseData[0],
+      country: responseData[1],
+      temperature: responseData[2],
+      humidity: responseData[3],
+      description,
+      fullRequestDate,
+      requestDate,
+      error: undefined
+    });
+
+    localStorage.setItem(`${currentService}, ${receivedCity}`, [
+      currentService,
+      responseData[0],
+      responseData[1],
+      responseData[2],
+      responseData[3],
+      description,
+      fullRequestDate,
+      requestDate
+    ]);
+  };
+
+  // if weather is stored
+  updateState = storedWeather => {
+    const weather = storedWeather.split(",");
+
+    this.setState({
+      currentService: weather[0],
+      city: weather[1],
+      country: weather[2],
+      temperature: weather[3],
+      humidity: weather[4],
+      description: weather[5],
+      fullRequestDate: weather[6],
+      requestDate: weather[7],
+      error: undefined
+    });
+  };
 
   changeService = () => {
     const currentService =
@@ -291,7 +250,6 @@ class App extends Component {
         : this.state.services[0];
 
     localStorage.setItem("service", currentService);
-
     this.setState({ currentService });
   };
 
@@ -309,7 +267,7 @@ class App extends Component {
 
         <main>
           <Form
-            getWeather={this.getWeather}
+            manualWeatherRequest={this.manualWeatherRequest}
             currentService={this.state.currentService}
             changeService={this.changeService}
           />
@@ -321,7 +279,7 @@ class App extends Component {
             temperature={this.state.temperature}
             humidity={this.state.humidity}
             description={this.state.description}
-            requestDate={this.state.requestDate}
+            fullRequestDate={this.state.fullRequestDate}
             error={this.state.error}
           />
         </main>
