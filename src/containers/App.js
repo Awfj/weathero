@@ -189,41 +189,49 @@ class App extends Component {
     const isCityStored = Boolean(localStorage.getItem("city"));
     const currentService = this.state.currentService;
     const receivedCity = responseData[0].toLowerCase();
+    const storedWeather = localStorage.getItem(
+      `${this.state.currentService}, ${responseData[0].toLowerCase()}`
+    );
 
-    if (!(isServiceStored && isCityStored)) {
-      localStorage.setItem("service", currentService);
-      localStorage.setItem("city", receivedCity);
+    if (!storedWeather || this.checkIfExpired(storedWeather.split(",")[7])) {
+      if (!(isServiceStored && isCityStored)) {
+        localStorage.setItem("service", currentService);
+        localStorage.setItem("city", receivedCity);
+      }
+
+      const fullRequestDate = String(new Date());
+      const requestDate = new Date().getTime();
+
+      let description = responseData[4];
+      if (responseData[4] === responseData[4].toLowerCase()) {
+        description =
+          responseData[4][0].toUpperCase() + responseData[4].slice(1);
+      }
+
+      this.setState({
+        city: responseData[0],
+        country: responseData[1],
+        temperature: responseData[2],
+        humidity: responseData[3],
+        description,
+        fullRequestDate,
+        requestDate,
+        error: undefined
+      });
+
+      localStorage.setItem(`${currentService}, ${receivedCity}`, [
+        currentService,
+        responseData[0],
+        responseData[1],
+        responseData[2],
+        responseData[3],
+        description,
+        fullRequestDate,
+        requestDate
+      ]);
+    } else {
+      this.updateState(storedWeather);
     }
-
-    const fullRequestDate = String(new Date());
-    const requestDate = new Date().getTime();
-
-    let description = responseData[4];
-    if (responseData[4] === responseData[4].toLowerCase()) {
-      description = responseData[4][0].toUpperCase() + responseData[4].slice(1);
-    }
-
-    this.setState({
-      city: responseData[0],
-      country: responseData[1],
-      temperature: responseData[2],
-      humidity: responseData[3],
-      description,
-      fullRequestDate,
-      requestDate,
-      error: undefined
-    });
-
-    localStorage.setItem(`${currentService}, ${receivedCity}`, [
-      currentService,
-      responseData[0],
-      responseData[1],
-      responseData[2],
-      responseData[3],
-      description,
-      fullRequestDate,
-      requestDate
-    ]);
   };
 
   // if weather is stored
