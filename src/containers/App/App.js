@@ -4,9 +4,9 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 
 import "./App.modules.scss";
-import Form from "../components/weather/Form/Form";
-import Result from "../components/weather/Result/Result";
-import Footer from "../components/layout/Footer/Footer";
+import Form from "../../components/weather/Form/Form";
+import Result from "../../components/weather/Result/Result";
+import Footer from "../../components/layout/Footer/Footer";
 
 const OPENWEATHERMAP_KEY = process.env.REACT_APP_OPENWEATHERMAP_KEY;
 const APIXU_KEY = process.env.REACT_APP_APIXU_KEY;
@@ -85,12 +85,8 @@ class App extends Component {
           } else {
             this.autoWeatherRequest(city);
           }
-        } else {
-          continue;
-        }
-      } else {
-        continue;
-      }
+        } else continue;
+      } else continue;
     }
   }
 
@@ -114,18 +110,42 @@ class App extends Component {
     const inputValue = document.forms.searchForm.city.value.trim();
     if (!inputValue) return;
 
+    const currentService = this.state.currentService;
     const searchedCity = inputValue.toLowerCase();
     const storedWeather = localStorage.getItem(
-      `${this.state.currentService}, ${searchedCity}`
+      `${currentService}, ${searchedCity}`
     );
 
     if (!storedWeather || this.checkIfExpired(storedWeather.split(",")[7])) {
-      const url = this.chooseURL(searchedCity);
-      this.getWeather(url);
+      const weather = this.lookForVariation(currentService, searchedCity);
+      if (weather && !this.checkIfExpired(weather.split(",")[7])) {
+        this.updateState(weather);
+      } else {
+        const url = this.chooseURL(searchedCity);
+        this.getWeather(url);
+      }
     } else {
       this.updateState(storedWeather);
     }
   };
+
+  lookForVariation(service, city) {
+    for (let key in localStorage) {
+      if (typeof localStorage[key] === "string") {
+        const weather = localStorage[key].split(",");
+        if (weather.length > 8 && weather[0] === service) {
+          const variations = weather.slice(8);
+          const index = variations.indexOf(city);
+
+          if (index !== -1 && variations[index].length === city.length) {
+            return localStorage.getItem(
+              `${service}, ${weather[1].toLowerCase()}`
+            );
+          } else continue;
+        } else continue;
+      } else continue;
+    }
+  }
 
   checkIfExpired(requestDate) {
     const currentDate = new Date().getTime();
@@ -190,7 +210,7 @@ class App extends Component {
     const currentService = this.state.currentService;
     const receivedCity = responseData[0].toLowerCase();
     const storedWeather = localStorage.getItem(
-      `${this.state.currentService}, ${responseData[0].toLowerCase()}`
+      `${currentService}, ${receivedCity}`
     );
 
     if (!storedWeather || this.checkIfExpired(storedWeather.split(",")[7])) {
@@ -231,6 +251,24 @@ class App extends Component {
       ]);
     } else {
       this.updateState(storedWeather);
+    }
+    this.addVariation(currentService, receivedCity);
+  };
+
+  // if a variation of a city name is entered
+  addVariation = (service, city) => {
+    const searchedCity = document.forms.searchForm.city.value
+      .trim()
+      .toLowerCase();
+
+    if (searchedCity && searchedCity !== city) {
+      const weather = localStorage.getItem(`${service}, ${city}`);
+      const slicedWeather = weather.slice(0, weather.length);
+
+      localStorage.setItem(`${service}, ${city}`, [
+        slicedWeather,
+        searchedCity
+      ]);
     }
   };
 
